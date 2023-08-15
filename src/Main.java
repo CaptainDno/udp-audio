@@ -34,10 +34,10 @@ public class Main {
 
         int port = Integer.parseInt(args[3]);
 
-        final MediaClient[] clients = new MediaClient[3];
+        final MediaClient[] clients = new MediaClient[1];
 
         for (int i = 0; i < clients.length; i++){
-            MediaClient client = new MediaClient(target, networkInterface, port, maxPayloadSize * 10);
+            MediaClient client = new MediaClient(target, networkInterface, port, maxPayloadSize * 5);
             Thread thread = new Thread(client);
             thread.setPriority(Thread.MAX_PRIORITY);
             thread.setName("Media client");
@@ -50,11 +50,6 @@ public class Main {
         MediaServer server = new MediaServer(audioStream, audioStream.getFormat(), maxPayloadSize, System.currentTimeMillis() + Duration.ofSeconds(1).toMillis(), target, port);
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
         executorService.scheduleAtFixedRate(server, 0, 1, TimeUnit.SECONDS);
-        executorService.scheduleAtFixedRate(() -> {
-            for (MediaClient c : clients){
-                System.out.printf("Packets received by client: %d\n", c.received);
-            }
-        }, 0, 1, TimeUnit.SECONDS);
     }
 
     private static NetworkInterface getNetworkInterface() throws SocketException, UnknownHostException {

@@ -75,6 +75,8 @@ public class MediaServer implements Runnable{
         frameSize = serializableAudioFormat.getFrameSize();
 
         socket = new DatagramSocket();
+        socket.setTrafficClass(15);
+        socket.setSendBufferSize(maxPayloadSize * 5);
 
         buffer = ByteBuffer.allocate(bufferSize);
 
@@ -98,6 +100,7 @@ public class MediaServer implements Runnable{
             double drift = (double) (currentTime - lastExecutionTime - Duration.ofSeconds(0).toNanos()) / 1_000_000_000;
             additionalFrames += (int) Math.round(frameRate * drift);
             long framesToSend = frameRate;
+            System.out.printf("Running server. Frames sent: %d  Total packets sent: %d\n", framesToSend, packetsSent);
             //Check if we can send full chunk of additional samples
             if (additionalFrames >= framesInChunk) {
                 framesToSend += framesInChunk;
@@ -121,7 +124,6 @@ public class MediaServer implements Runnable{
 
                 nextFrame += length / frameSize;
             }
-            System.out.printf("Server executed. Frames sent: %d  Total packets sent: %d\n", framesToSend, packetsSent);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
