@@ -15,8 +15,6 @@ public class MediaClient implements Runnable{
 
     private boolean running = false;
 
-    public long received;
-
     public MediaClient(InetAddress group, NetworkInterface i, int port, int bufferSize) throws IOException {
         socket = new MulticastSocket(port);
         socket.joinGroup(new InetSocketAddress(group, 0), i);
@@ -30,7 +28,6 @@ public class MediaClient implements Runnable{
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             try {
                 socket.receive(packet);
-                received++;
                 byte head = buffer[0];
 
                 // If this is an info message
