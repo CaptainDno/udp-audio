@@ -111,7 +111,10 @@ public class MediaServer implements Runnable{
                 buffer.putLong(Byte.BYTES, nextFrame);
                 // Send data packet
                 DatagramPacket packet = new DatagramPacket(buffer.array(), length + HEADER_SIZE, group, port);
-                socket.send(packet);
+                //for (int i = 0; i < 3; i++){
+                    socket.send(packet);
+                //}
+
                 nextFrame += length / frameSize;
             }
 

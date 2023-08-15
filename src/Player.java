@@ -14,8 +14,10 @@ public class Player implements Runnable{
     long expectedFrame;
     final float frameRate;
     final byte[] silentFrame;
+
+    final int frameSize;
     public Player(InfoMessage message, int bufferSize, long expectedFrame, long playbackStartTime) throws LineUnavailableException {
-        System.out.printf("Playback start after %.2f seconds\n", (playbackStartTime - System.nanoTime()) / 1_000_000_000d);
+        System.out.printf("Playback start after %.2f seconds\n", (playbackStartTime - System.currentTimeMillis()) / 1_000d);
         final DataLine.Info info = new DataLine.Info(SourceDataLine.class, message.serializableAudioFormat, bufferSize);
         this.dataLine = (SourceDataLine) AudioSystem.getLine(info);
         dataLine.open(message.serializableAudioFormat, bufferSize);
@@ -25,7 +27,7 @@ public class Player implements Runnable{
         Arrays.fill(silentFrame, (byte) 0);
         this.silentFrame = silentFrame;
         this.frameRate = message.serializableAudioFormat.getFrameRate();
-
+        this.frameSize = message.serializableAudioFormat.getFrameSize();
     }
 
     @Override
@@ -71,6 +73,7 @@ public class Player implements Runnable{
             expectedFrame++;
         }
         dataLine.write(next.data, 0, next.data.length);
+        expectedFrame += next.data.length / frameSize;
         return true;
     }
     public void stop(){
