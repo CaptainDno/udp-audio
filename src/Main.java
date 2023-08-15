@@ -34,15 +34,12 @@ public class Main {
 
         int port = Integer.parseInt(args[3]);
 
-        final MediaClient[] clients = new MediaClient[1];
-
-        for (int i = 0; i < clients.length; i++){
+        for (int i = 0; i < 1; i++){
             MediaClient client = new MediaClient(target, networkInterface, port, maxPayloadSize * 5);
             Thread thread = new Thread(client);
             thread.setPriority(Thread.MAX_PRIORITY);
             thread.setName("Media client");
             thread.start();
-            clients[i] = client;
         }
 
         System.out.println("Opening file stream");
