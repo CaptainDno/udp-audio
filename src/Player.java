@@ -21,6 +21,7 @@ public class Player implements Runnable{
         final DataLine.Info info = new DataLine.Info(SourceDataLine.class, message.serializableAudioFormat, bufferSize);
         this.dataLine = (SourceDataLine) AudioSystem.getLine(info);
         dataLine.open(message.serializableAudioFormat, bufferSize);
+        dataLine.start();
         this.playbackStartTime = playbackStartTime;
         this.expectedFrame = expectedFrame;
         byte[] silentFrame = new byte[message.serializableAudioFormat.getFrameSize()];
@@ -33,19 +34,16 @@ public class Player implements Runnable{
     @Override
     public void run() {
         try {
-            // Take from queue and write to buffer
             while(true){
                 long time = System.currentTimeMillis();
                 if (time < playbackStartTime) {
-                    while (dataLine.available() > frameRate / 5) pipe();
                     while (time < playbackStartTime){
                         time = System.currentTimeMillis();
-                        if (playbackStartTime - time > 100) Thread.sleep(20);
                     }
-                    dataLine.start();
                     System.out.printf("Started playing with delay of %d ms\n", System.currentTimeMillis() - playbackStartTime);
                 }
                 else {
+                    // Take from queue and write to buffer
                     if (!pipe()) return;
                 }
             }
@@ -64,7 +62,6 @@ public class Player implements Runnable{
         }
         //If we receive old frames - ignore them, it is too late to write them in buffer
         if (expectedFrame > next.frame){
-            System.out.println("OldFrame");
             return true;
         }
         //Replace missing frames with prepared silent frame

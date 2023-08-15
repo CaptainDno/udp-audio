@@ -18,9 +18,6 @@ import java.util.concurrent.TimeUnit;
 // Press Shift twice to open the Search Everywhere dialog and type `show whitespaces`,
 // then press Enter. You can now see whitespace characters in your code.
 public class Main {
-    static final int HEADER_SIZE = Long.BYTES + Byte.BYTES;
-
-    static final byte DATA_HEADER = 0b00000000;
 
     public static void main(String[] args) throws IOException, UnsupportedAudioFileException {
 
@@ -37,18 +34,27 @@ public class Main {
 
         int port = Integer.parseInt(args[3]);
 
-        for (int i = 0; i < 1; i++){
+        final MediaClient[] clients = new MediaClient[3];
+
+        for (int i = 0; i < clients.length; i++){
             MediaClient client = new MediaClient(target, networkInterface, port, maxPayloadSize * 10);
             Thread thread = new Thread(client);
+            thread.setPriority(Thread.MAX_PRIORITY);
             thread.setName("Media client");
             thread.start();
+            clients[i] = client;
         }
+
         System.out.println("Opening file stream");
         AudioInputStream audioStream = AudioSystem.getAudioInputStream(new File(filepath));
         MediaServer server = new MediaServer(audioStream, audioStream.getFormat(), maxPayloadSize, System.currentTimeMillis() + Duration.ofSeconds(1).toMillis(), target, port);
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
         executorService.scheduleAtFixedRate(server, 0, 1, TimeUnit.SECONDS);
-
+        executorService.scheduleAtFixedRate(() -> {
+            for (MediaClient c : clients){
+                System.out.printf("Packets received by client: %d\n", c.received);
+            }
+        }, 0, 1, TimeUnit.SECONDS);
     }
 
     private static NetworkInterface getNetworkInterface() throws SocketException, UnknownHostException {

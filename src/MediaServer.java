@@ -57,6 +57,8 @@ public class MediaServer implements Runnable{
 
     private byte[] info;
 
+    private int packetsSent;
+
     public static final int HEADER_SIZE = Byte.BYTES + Long.BYTES;
 
     public MediaServer(AudioInputStream stream, AudioFormat serializableAudioFormat, int maxPayloadSize, long playbackStartTime, InetAddress group, int port) throws IOException {
@@ -90,6 +92,7 @@ public class MediaServer implements Runnable{
         try {
             // Sending packet with information about currently playing audio
             socket.send(infoPacket);
+            packetsSent++;
             long currentTime = System.nanoTime();
             // We always will be late => should compensate for it once drift is bigger than chunk size
             double drift = (double) (currentTime - lastExecutionTime - Duration.ofSeconds(0).toNanos()) / 1_000_000_000;
@@ -100,7 +103,7 @@ public class MediaServer implements Runnable{
                 framesToSend += framesInChunk;
                 framesToSend -= framesInChunk;
             }
-            System.out.println("Running server. Frames to send: " + framesToSend);
+
             // Sending data
             for (; framesToSend > 0; framesToSend -= framesInChunk){
                 int length = stream.read(buffer.array(), HEADER_SIZE, chunkSize);
@@ -113,10 +116,12 @@ public class MediaServer implements Runnable{
                 DatagramPacket packet = new DatagramPacket(buffer.array(), length + HEADER_SIZE, group, port);
                 //for (int i = 0; i < 3; i++){
                     socket.send(packet);
+                    packetsSent++;
                 //}
 
                 nextFrame += length / frameSize;
             }
+            System.out.printf("Server executed. Frames sent: %d  Total packets sent: %d\n", framesToSend, packetsSent);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
