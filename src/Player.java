@@ -33,15 +33,15 @@ public class Player implements Runnable{
         try {
             // Take from queue and write to buffer
             while(true){
-                long time = System.nanoTime();
+                long time = System.currentTimeMillis();
                 if (time < playbackStartTime) {
                     while (dataLine.available() > frameRate / 5) pipe();
                     while (time < playbackStartTime){
-                        time = System.nanoTime();
-                        //if (playbackStartTime - time > TimeUnit.MILLISECONDS.toNanos(100)) Thread.sleep(50);
+                        time = System.currentTimeMillis();
+                        if (playbackStartTime - time > 100) Thread.sleep(20);
                     }
                     dataLine.start();
-                    System.out.printf("Started playing with delay of %d ms\n", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - playbackStartTime));
+                    System.out.printf("Started playing with delay of %d ms\n", System.currentTimeMillis() - playbackStartTime);
                 }
                 else {
                     if (!pipe()) return;

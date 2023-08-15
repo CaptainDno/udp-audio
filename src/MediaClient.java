@@ -56,13 +56,14 @@ public class MediaClient implements Runnable{
                     } else if (currentInfo != null) {
                         assert message != null;
                         double seconds = message.frame / currentInfo.serializableAudioFormat.getFrameRate();
-                        long nanos = Math.round(TimeUnit.SECONDS.toNanos(1) * seconds) + currentInfo.playbackStartTime;
+                        System.out.printf("Frame %d will be played after %.3f seconds\n", message.frame, seconds);
+                        long millis = Math.round(TimeUnit.SECONDS.toMillis(1) * seconds) + currentInfo.playbackStartTime;
                         // Create new player
                         this.player = new Player(
                                 currentInfo,
                                 Math.round(currentInfo.serializableAudioFormat.getFrameRate() * currentInfo.serializableAudioFormat.getFrameSize()),
                                 message.frame,
-                                nanos
+                                millis
                         );
                         this.playerThread = new Thread(player, "Player");
                         playerThread.setPriority(Thread.MAX_PRIORITY);

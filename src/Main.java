@@ -37,20 +37,19 @@ public class Main {
 
         int port = Integer.parseInt(args[3]);
 
-        System.out.println("Opening file stream");
-        AudioInputStream audioStream = AudioSystem.getAudioInputStream(new File(filepath));
-
-        for (int i = 0; i < 2; i++){
+        for (int i = 0; i < 1; i++){
             MediaClient client = new MediaClient(target, networkInterface, port, maxPayloadSize * 2);
             Thread thread = new Thread(client);
             thread.setName("Media client");
             thread.start();
         }
-
-        MediaServer server = new MediaServer(audioStream, audioStream.getFormat(), maxPayloadSize, System.nanoTime() + Duration.ofSeconds(1).toNanos(), target, port);
+        /*
+        System.out.println("Opening file stream");
+        AudioInputStream audioStream = AudioSystem.getAudioInputStream(new File(filepath));
+        MediaServer server = new MediaServer(audioStream, audioStream.getFormat(), maxPayloadSize, System.currentTimeMillis() + Duration.ofSeconds(1).toMillis(), target, port);
         ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
         executorService.scheduleAtFixedRate(server, 0, 1, TimeUnit.SECONDS);
-
+        */
     }
 
     private static NetworkInterface getNetworkInterface() throws SocketException, UnknownHostException {

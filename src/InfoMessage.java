@@ -4,7 +4,9 @@ import java.util.Objects;
 
 public class InfoMessage implements Message{
 
+    // In millis
     public final long playbackStartTime;
+
     public final AudioFormat serializableAudioFormat;
 
     public InfoMessage(long playbackStartTime, AudioFormat format){
