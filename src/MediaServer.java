@@ -3,9 +3,7 @@ import javax.sound.sampled.AudioInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 
@@ -77,6 +75,7 @@ public class MediaServer implements Runnable{
         socket = new DatagramSocket();
         socket.setTrafficClass(15);
         socket.setSendBufferSize(maxPayloadSize * 5);
+        socket.setOption(StandardSocketOptions.IP_MULTICAST_TTL, 20);
 
         buffer = ByteBuffer.allocate(bufferSize);
 
@@ -104,9 +103,8 @@ public class MediaServer implements Runnable{
             //Check if we can send full chunk of additional samples
             if (additionalFrames >= framesInChunk) {
                 framesToSend += framesInChunk;
-                framesToSend -= framesInChunk;
+                additionalFrames -= framesInChunk;
             }
-
             // Sending data
             for (; framesToSend > 0; framesToSend -= framesInChunk){
                 int length = stream.read(buffer.array(), HEADER_SIZE, chunkSize);
@@ -117,10 +115,10 @@ public class MediaServer implements Runnable{
                 buffer.putLong(Byte.BYTES, nextFrame);
                 // Send data packet
                 DatagramPacket packet = new DatagramPacket(buffer.array(), length + HEADER_SIZE, group, port);
-                //for (int i = 0; i < 3; i++){
+                for (int i = 0; i < 2; i++){
                     socket.send(packet);
                     packetsSent++;
-                //}
+                }
 
                 nextFrame += length / frameSize;
             }

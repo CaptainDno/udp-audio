@@ -10,6 +10,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 // Args:
+// -p or -b for play or broadcast respectively
 // max payload size in bytes
 // path to file
 // multicast address
@@ -23,30 +24,33 @@ public class Main {
 
         System.out.println("Starting...");
 
+        String mode = args[0];
+
         NetworkInterface networkInterface = getNetworkInterface();
 
         // How much audio data will we put in one packet
-        int maxPayloadSize = Integer.parseInt(args[0]);
+        int maxPayloadSize = Integer.parseInt(args[1]);
         // Path to audio file
-        String filepath = args[1];
+        String filepath = args[2];
         // Multicast address
-        InetAddress target = InetAddress.getByName(args[2]);
+        InetAddress target = InetAddress.getByName(args[3]);
 
-        int port = Integer.parseInt(args[3]);
-
-        for (int i = 0; i < 1; i++){
+        int port = Integer.parseInt(args[4]);
+        if (mode.equals("-p")){
             MediaClient client = new MediaClient(target, networkInterface, port, maxPayloadSize * 5);
             Thread thread = new Thread(client);
             thread.setPriority(Thread.MAX_PRIORITY);
             thread.setName("Media client");
             thread.start();
         }
+        if (mode.equals("-b")){
+            System.out.println("Opening file stream");
+            AudioInputStream audioStream = AudioSystem.getAudioInputStream(new File(filepath));
+            MediaServer server = new MediaServer(audioStream, audioStream.getFormat(), maxPayloadSize, System.currentTimeMillis() + Duration.ofSeconds(1).toMillis(), target, port);
+            ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+            executorService.scheduleAtFixedRate(server, 0, 1, TimeUnit.SECONDS);
 
-        System.out.println("Opening file stream");
-        AudioInputStream audioStream = AudioSystem.getAudioInputStream(new File(filepath));
-        MediaServer server = new MediaServer(audioStream, audioStream.getFormat(), maxPayloadSize, System.currentTimeMillis() + Duration.ofSeconds(1).toMillis(), target, port);
-        ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-        executorService.scheduleAtFixedRate(server, 0, 1, TimeUnit.SECONDS);
+        }
     }
 
     private static NetworkInterface getNetworkInterface() throws SocketException, UnknownHostException {
