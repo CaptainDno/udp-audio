@@ -99,12 +99,12 @@ public class MediaServer implements Runnable{
             double drift = (double) (currentTime - lastExecutionTime - Duration.ofSeconds(0).toNanos()) / 1_000_000_000;
             additionalFrames += (int) Math.round(frameRate * drift);
             long framesToSend = frameRate;
-            System.out.printf("Running server. Frames sent: %d  Total packets sent: %d\n", framesToSend, packetsSent);
             //Check if we can send full chunk of additional samples
             if (additionalFrames >= framesInChunk) {
                 framesToSend += framesInChunk;
                 additionalFrames -= framesInChunk;
             }
+            System.out.printf("Running server. Frames sent: %d  Total packets sent: %d\n", framesToSend, packetsSent);
             // Sending data
             for (; framesToSend > 0; framesToSend -= framesInChunk){
                 int length = stream.read(buffer.array(), HEADER_SIZE, chunkSize);
