@@ -74,7 +74,7 @@ public class MediaServer implements Runnable{
 
         socket = new DatagramSocket();
         socket.setTrafficClass(15);
-        socket.setSendBufferSize(maxPayloadSize * 5);
+        socket.setSendBufferSize(maxPayloadSize * 10);
         socket.setOption(StandardSocketOptions.IP_MULTICAST_TTL, 20);
 
         buffer = ByteBuffer.allocate(bufferSize);
