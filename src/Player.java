@@ -17,7 +17,7 @@ public class Player implements Runnable{
 
     final int frameSize;
     public Player(InfoMessage message, int bufferSize, long expectedFrame, long playbackStartTime) throws LineUnavailableException {
-        System.out.printf("Playback start after %.2f seconds\n", (playbackStartTime - System.currentTimeMillis()) / 1_000d);
+        System.out.printf("[PLAYER] Playback start after %.2f seconds\n", (playbackStartTime - System.currentTimeMillis()) / 1_000d);
         final DataLine.Info info = new DataLine.Info(SourceDataLine.class, message.serializableAudioFormat, bufferSize);
         this.dataLine = (SourceDataLine) AudioSystem.getLine(info);
         dataLine.open(message.serializableAudioFormat, bufferSize);
@@ -29,18 +29,28 @@ public class Player implements Runnable{
         this.silentFrame = silentFrame;
         this.frameRate = message.serializableAudioFormat.getFrameRate();
         this.frameSize = message.serializableAudioFormat.getFrameSize();
+        dataLine.write(silentFrame, 0, silentFrame.length);
+        dataLine.write(silentFrame, 0, silentFrame.length);
+        dataLine.write(silentFrame, 0, silentFrame.length);
+        dataLine.write(silentFrame, 0, silentFrame.length);
     }
 
     @Override
     public void run() {
         try {
-            while(true){
+            for(;;){
                 long time = System.currentTimeMillis();
                 if (time < playbackStartTime) {
+                    // Technically it is not necessary to do this, but audio API has inconstant latency for some buffer writes (especially first one after a long break)
+                    // So we write some frames kind of "warming up" everything to reduce latency
+                    /*int frameCount = Math.round(Math.max(0, (playbackStartTime - time - 100)) / 1000f * frameRate);
+                    for (int i = 0; i < frameCount; i++) {
+
+                    }*/
                     while (time < playbackStartTime){
                         time = System.currentTimeMillis();
                     }
-                    System.out.printf("Started playing with delay of %d ms\n", System.currentTimeMillis() - playbackStartTime);
+                    System.out.printf("[PLAYER] Started playing with delay of %d ms\n", System.currentTimeMillis() - playbackStartTime);
                 }
                 else {
                     // Take from queue and write to buffer
@@ -51,6 +61,11 @@ public class Player implements Runnable{
             throw new RuntimeException(e);
         }
     }
+
+    int counter = 0;
+    long silentFrames = 0;
+    long oldFrames = 0;
+
     boolean pipe() throws InterruptedException {
         DataMessage next = queue.poll(1, TimeUnit.SECONDS);
         if (next == null) {
@@ -62,15 +77,22 @@ public class Player implements Runnable{
         }
         //If we receive old frames - ignore them, it is too late to write them in buffer
         if (expectedFrame > next.frame){
+            oldFrames++;
             return true;
         }
         //Replace missing frames with prepared silent frame
         while (expectedFrame < next.frame){
-            dataLine.write(silentFrame, silentFrame.length, 0);
+            dataLine.write(silentFrame, 0, silentFrame.length);
             expectedFrame++;
+            silentFrames++;
         }
         dataLine.write(next.data, 0, next.data.length);
-        expectedFrame += next.data.length / frameSize;
+        expectedFrame += next.data.length / frameSize;;
+        counter++;
+        if (counter > 200) {
+            System.out.printf("\r[PLAYER] Playing audio (%.2f sec);Frames total: %d Silent frames total: %d; Old frames total: %d; ", (System.currentTimeMillis() - playbackStartTime) / 1000f, expectedFrame, silentFrames, oldFrames);
+            counter = 0;
+        }
         return true;
     }
     public void stop(){

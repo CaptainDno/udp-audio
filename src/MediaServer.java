@@ -1,11 +1,11 @@
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Header structure:
@@ -63,8 +63,17 @@ public class MediaServer implements Runnable{
         this.stream = stream;
 
         frameRate = (int) serializableAudioFormat.getFrameRate();
+
+        int framesInChunk  = Math.floorDiv(maxPayloadSize - HEADER_SIZE, serializableAudioFormat.getFrameSize());
+
+        while (frameRate % framesInChunk != 0) {
+            framesInChunk--;
+        }
+
+        this.framesInChunk = framesInChunk;
+
         //Subtract first byte and size of long in bytes
-        framesInChunk = Math.floorDiv(maxPayloadSize - HEADER_SIZE, serializableAudioFormat.getFrameSize());
+        //framesInChunk = Math.floorDiv(maxPayloadSize - HEADER_SIZE, serializableAudioFormat.getFrameSize());
         //Size of chunk to read from file
         chunkSize = framesInChunk * serializableAudioFormat.getFrameSize();
         //Buffer size for each datagram with data
@@ -84,7 +93,8 @@ public class MediaServer implements Runnable{
         //Prepare info message
         info = new InfoMessage(playbackStartTime, serializableAudioFormat).toBytes();
         lastExecutionTime = System.nanoTime();
-        additionalFrames = frameRate;
+        additionalFrames = framesInChunk;
+        nextFrame = 0;
     }
 
     @Override
@@ -96,7 +106,7 @@ public class MediaServer implements Runnable{
             packetsSent++;
             long currentTime = System.nanoTime();
             // We always will be late => should compensate for it once drift is bigger than chunk size
-            double drift = (double) (currentTime - lastExecutionTime - Duration.ofSeconds(0).toNanos()) / 1_000_000_000;
+            double drift = (double) Math.max(0, currentTime - lastExecutionTime - Duration.ofSeconds(1).toNanos()) / 1_000_000_000;
             additionalFrames += (int) Math.round(frameRate * drift);
             long framesToSend = frameRate;
             //Check if we can send full chunk of additional samples
@@ -104,7 +114,7 @@ public class MediaServer implements Runnable{
                 framesToSend += framesInChunk;
                 additionalFrames -= framesInChunk;
             }
-            System.out.printf("Running server. Frames sent: %d  Total packets sent: %d\n", framesToSend, packetsSent);
+            System.out.printf("%s [SERVER] Running server: Frames to send: %d  Total packets sent: %d  Drift: %f\n", LocalTime.now().format(DateTimeFormatter.ISO_TIME), framesToSend, packetsSent, drift);
             // Sending data
             for (; framesToSend > 0; framesToSend -= framesInChunk){
                 int length = stream.read(buffer.array(), HEADER_SIZE, chunkSize);
@@ -115,18 +125,18 @@ public class MediaServer implements Runnable{
                 buffer.putLong(Byte.BYTES, nextFrame);
                 // Send data packet
                 DatagramPacket packet = new DatagramPacket(buffer.array(), length + HEADER_SIZE, group, port);
-                for (int i = 0; i < 2; i++){
+                for (int i = 0; i < 1; i++){
                     socket.send(packet);
                     packetsSent++;
                 }
 
                 nextFrame += length / frameSize;
             }
+            lastExecutionTime = currentTime;
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
 
     }
 }
